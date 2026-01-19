@@ -56,16 +56,16 @@ class StellarApi {
 extension StellarApi: IApi {
     func getAccountDetails(accountId: String) async throws -> Account? {
         let response = await sdk.accounts.getAccountDetails(accountId: accountId)
-
+        
         switch response {
         case let .success(accountDetails):
             let assetBalances = accountDetails.balances.compactMap { balance -> AssetBalance? in
                 guard let decimalBalance = Decimal(string: balance.balance) else {
                     return nil
                 }
-
+                
                 let asset: Asset
-
+                
                 switch balance.assetType {
                 case AssetTypeAsString.NATIVE:
                     asset = .native
@@ -76,17 +76,17 @@ extension StellarApi: IApi {
                         return nil
                     }
                 }
-
+                
                 return AssetBalance(asset: asset, balance: decimalBalance, limit: balance.limit.flatMap { Decimal(string: $0) })
             }
-
+            
             return Account(
                 subentryCount: accountDetails.subentryCount,
                 assetBalanceMap: assetBalances.reduce(into: [:]) { $0[$1.asset] = $1 }
             )
         case let .failure(error):
             StellarSDKLog.printHorizonRequestErrorMessage(tag: "account details", horizonRequestError: error)
-
+            
             switch error {
             case .notFound:
                 return nil
@@ -109,6 +109,50 @@ extension StellarApi: IApi {
             }
         case let .failure(error):
             StellarSDKLog.printHorizonRequestErrorMessage(tag: "operations", horizonRequestError: error)
+            throw error
+        }
+    }
+    
+    func getUnsignedTransaction(keyPair: KeyPair, operations: [stellarsdk.Operation], memo: Memo?) async throws -> String? {
+        let accountResponse = await sdk.accounts.getAccountDetails(accountId: keyPair.accountId)
+        
+        switch accountResponse {
+        case let .success(accountResponse):
+            let transaction = try Transaction(
+                sourceAccount: accountResponse,
+                operations: operations,
+                memo: memo
+            )
+            return transaction.transactionXDR.xdrEncoded
+        case let .failure(error):
+            StellarSDKLog.printHorizonRequestErrorMessage(tag: "send transaction", horizonRequestError: error)
+            throw error
+        }
+    }
+    
+    func sendSigned(keyPair: KeyPair, transactionXDR: String) async throws -> String {
+        let accountResponse = await sdk.accounts.getAccountDetails(accountId: keyPair.accountId)
+        
+        switch accountResponse {
+        case let .success(accountResponse):
+            let transaction = try Transaction(xdr: transactionXDR)
+            return try await sendSigned(transaction: transaction)
+        case let .failure(error):
+            StellarSDKLog.printHorizonRequestErrorMessage(tag: "send transaction", horizonRequestError: error)
+            throw error
+        }
+    }
+    
+    func sendSigned(transaction: Transaction) async throws -> String {
+        let response = await sdk.transactions.submitTransaction(transaction: transaction)
+
+        switch response {
+        case let .success(details):
+            return details.id
+        case let .destinationRequiresMemo(destinationAccountId):
+            throw SendError.destinationRequiresMemo(destinationAccountId: destinationAccountId)
+        case let .failure(error):
+            StellarSDKLog.printHorizonRequestErrorMessage(tag: "send transaction", horizonRequestError: error)
             throw error
         }
     }

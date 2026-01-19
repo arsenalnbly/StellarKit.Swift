@@ -221,6 +221,18 @@ public extension Kit {
         let api = api(testNet: testNet)
         return try await api.getAccountDetails(accountId: accountId)
     }
+    
+    static func getUnsignedTransaction(keyPair: KeyPair, operations: [stellarsdk.Operation], memo: Memo = Memo.none, testNet: Bool = false) async throws -> String {
+        let api = api(testNet: testNet)
+        guard let api = api as? StellarApi else {
+            throw SyncError.notStarted
+        }
+        guard let xdr = try await api.getUnsignedTransaction(keyPair: keyPair, operations: operations, memo: memo) else {
+            throw SyncError.notStarted
+        }
+        
+        return xdr
+    }
 
     private static func api(testNet: Bool) -> IApi & IApiListener {
         let sdk = testNet ? StellarSDK.testNet() : StellarSDK.publicNet()
