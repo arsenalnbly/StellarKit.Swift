@@ -130,12 +130,12 @@ extension StellarApi: IApi {
         }
     }
     
-    func sendSigned(keyPair: KeyPair, transactionXDR: String) async throws -> String {
+    func sendSigned(keyPair: KeyPair, envelopeXdr: String) async throws -> String {
         let accountResponse = await sdk.accounts.getAccountDetails(accountId: keyPair.accountId)
+        guard let transaction = try? Transaction(envelopeXdr: envelopeXdr)
         
         switch accountResponse {
         case let .success(accountResponse):
-            let transaction = try Transaction(xdr: transactionXDR)
             return try await sendSigned(transaction: transaction)
         case let .failure(error):
             StellarSDKLog.printHorizonRequestErrorMessage(tag: "send transaction", horizonRequestError: error)
