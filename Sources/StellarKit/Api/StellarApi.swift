@@ -123,7 +123,7 @@ extension StellarApi: IApi {
                 operations: operations,
                 memo: memo
             )
-            return transaction.transactionXDR.xdrEncoded
+            return transaction.encodedEnvelope()
         case let .failure(error):
             StellarSDKLog.printHorizonRequestErrorMessage(tag: "send transaction", horizonRequestError: error)
             throw error
