@@ -132,7 +132,7 @@ extension StellarApi: IApi {
     
     func sendSigned(keyPair: KeyPair, envelopeXdr: String) async throws -> String {
         let accountResponse = await sdk.accounts.getAccountDetails(accountId: keyPair.accountId)
-        guard let transaction = try? Transaction(envelopeXdr: envelopeXdr)
+        let transaction = try Transaction(envelopeXdr: envelopeXdr)
         
         switch accountResponse {
         case let .success(accountResponse):
