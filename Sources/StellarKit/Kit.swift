@@ -188,6 +188,13 @@ public extension Kit {
         return try await api.send(keyPair: keyPair, transaction: transaction)
     }
     
+    static func sendSigned(transactionXDR: String, keyPair: KeyPair, testNet: Bool = false) async throws -> String {
+        guard let api = api(testNet: testNet) as? StellarApi else {
+            throw SendError.noTransactionSender
+        }
+        return try await api.sendSigned(keyPair: keyPair, transactionXDR: transactionXDR)
+    }
+    
     static func send(transactionEnvelope: String, keyPair: KeyPair, testNet: Bool = false) async throws -> String {
         let transaction = try Transaction.init(envelopeXdr: transactionEnvelope)
         return try await send(transaction: transaction, keyPair: keyPair, testNet: testNet)
